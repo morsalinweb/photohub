@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A photo sharing platform</title>
+    <style>
+        .display-pages {
+            display: none;
+        }
+
+        #login {
+            display: none;
+        }
+
+        .page-content>div {
+            display: none;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px;
+        }
+
+        .user {
+            display: block;
+        }
+
+        .user-profile {
+            display: flex;
+        }
+
+        .user-avatar {
+            height: 80px;
+            width: 80px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-info {
+            display: block;
+        }
+
+        .user-info h2 {
+            margin: 0 0
+        }
+
+        .file-item {
+            height: 150px;
+            width: 200px;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-file {
+            background-color: red;
+            padding: 10px;
+            color: #fff;
+            border-radius: 5px;
+            position: absolute;
+            top: 10;
+            right: 10px;
+        }
+
+        .explore .post {
+            height: ;
+        }
+
+        .display-search-user {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .display-search-avatar {
+            height: 50px;
+            width: 50px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .display-search-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .display-search-user h3 {
+            margin: 0;
+        }
+
+        .display-search-user p {
+            margin: 0;
+            color: gray;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth">
+        <form id="signup">
+            <input type="text" name="name" class="name" placeholder="name">
+            <input type="text" class="username" placeholder="Username">
+            <input type="text" class="email" placeholder="email">
+            <input type="text" class="password" placeholder="password">
+            <input type="file" name="avatar" class="avatar">
+            <button type="submit">Sign Up</button>
+            <p class="view-login">Swap Form</p>
+        </form>
+        <form id="login">
+            <input type="text" class="username" placeholder="Username">
+            <input type="text" class="password" placeholder="password">
+            <button type="submit">Login</button>
+            <p class="view-signup">Swap Form</p>
+        </form>
+    </div>
+
+    <div class="display-pages" id="displayPages">
+        <div class="page-sidebar" id="pageSidebar">
+            <button onclick="showContent('user')">User</button>
+            <button onclick="showContent('post')">Post</button>
+            <button onclick="showContent('explore')">Explore</button>
+            <button onclick="showContent('search')">Search</button>
+            <button onclick="showContent('browse')">Browse</button>
+        </div>
+        <div class="page-content" id="pageContent">
+            <div class="user-content" id="userContent"></div>
+            <div class="post-content" id="postContent">
+                <h2>Create Post</h2>
+                <form id="postForm">
+                    <input type="file" name="post-image" class="post-image" multiple>
+                    <div id="postPreview">
+
+                    </div>
+                    <input type="text" name="postContent" class="post-caption">
+                    <button type="submit">Post</button>
+                </form>
+            </div>
+            <div class="explore-content" id="exploreContent">
+
+            </div>
+            <div class="search-content" id="searchContent">
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="searchInput" placeholder="search users">
+                </div>
+                <div class="displaySearchUsers" id="displaySearchUsers">
+
+                </div>
+                <div class="displayOtherUserProfile" id="displayOtherUserProfile">
+
+                </div>
+            </div>
+            <div class="search-content" id="browseContent">
+                <div class="browse" id='browse'>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+
+        function showContent(contentType) {
+            var contentSections = document.querySelectorAll('.page-content > div');
+            contentSections.forEach(function (section) {
+                section.style.display = 'none';
+            });
+
+            var selectedContent = document.getElementById(contentType + 'Content');
+            if (selectedContent) {
+                selectedContent.style.display = 'block';
+            }
+        }
+
+        let users = JSON.parse(localStorage.getItem('userData')) || [];
+        let currentUser;
+
+        const viewSignup = document.querySelector('.view-signup');
+        const viewLogin = document.querySelector('.view-login');
+
+        const signupForm = document.getElementById('signup');
+        const loginForm = document.getElementById('login');
+
+        viewSignup.addEventListener('click', () => {
+            signupForm.style.display = 'block';
+            loginForm.style.display = 'none';
+        })
+
+        viewLogin.addEventListener('click', () => {
+            signupForm.style.display = 'none';
+            loginForm.style.display = 'block';
+        })
+
+        signupForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const name = this.querySelector('.name').value.trim();
+            const username = this.querySelector('.username').value.trim();
+            const email = this.querySelector('.email').value.trim();
+            const password = this.querySelector('.password').value.trim();
+            const avatarFile = this.querySelector('.avatar').files[0];
+
+            const isUser = users.find(user => user.username === username);
+            if (isUser) {
+                alert("Username already exist, choose different username!");
+                return;
+            }
+
+            let avatarURL = '';
+            if (avatarFile) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    avatarURL = e.target.result;
+                    saveUserData(name, username, email, password, avatarURL);
+                };
+                reader.readAsDataURL(avatarFile);
+            } else {
+                saveUserData(name, username, email, password, avatarURL);
+            }
+        });
+
+        function saveUserData(name, username, email, password, avatarURL) {
+            if (name && username && email && password) {
+                const userData = {
+                    name: name,
+                    username: username,
+                    email: email,
+                    password: password,
+                    avatar: avatarURL,
+                    posts: [],
+                    following: [],
+                    follower: [],
+                    countFollowing: 0,
+                    countFollower: 0,
+
+                };
+                currentUser = userData;
+                displayUser(currentUser);
+                explorePost();
+                users.push(userData);
+                displayBrowsePosts()
+                document.getElementById('displayPages').style.display = 'block';
+                signupForm.style.display = 'none';
+            }
+            localStorage.setItem('userData', JSON.stringify(users));
+        }
+
+        loginForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const username = this.querySelector('.username').value.trim();
+            const password = this.querySelector('.password').value.trim();
+
+            const userData = JSON.parse(localStorage.getItem('userData'));
+
+            if (userData && Array.isArray(userData)) {
+                const isUser = userData.find(ud => ud.username === username && ud.password === password);
+                if (isUser) {
+                    currentUser = isUser;
+                    document.getElementById('displayPages').style.display = 'block';
+                    loginForm.style.display = 'none';
+                    displayUser(currentUser);
+                    explorePost();
+                    displayBrowsePosts()
+                } else {
+                    alert('Invalid username or password');
+                }
+            } else {
+                alert('No user data found');
+            }
+        });
+
+        function displayUserProfile(user, isCurrentUser) {
+            let index = users.findIndex(userIndex => userIndex.username === user.username);
+            return `
+        <div class='user'>
+            <div class="user-profile">
+                <div class='user-avatar'>
+                    <img src="${user.avatar}" alt="current user avatar" />
+                </div>
+                <div class="user-info">
+                    <h2>${user.name}</h2>
+                    <p>${user.username}</p>
+                </div>
+                <span>Followers: ${user.countFollower}</span>
+                <span>Followings: ${user.countFollowing}</span>
+                <div class='followingAndFollower'>
+                    <div>
+                        <h3>Followings: </h3>
+                        ${user.following.map(following =>
+                `<span>${following}</span>`
+            ).join('')}
+                    </div>
+                    <div>
+                        <h3>Followers</h3>
+                        ${user.follower.map(follower =>
+                `<span>${follower}</span>`
+            ).join('')}
+                    </div>
+                </div>
+            </div>
+            ${isCurrentUser ? '' : `<button onclick='followAndUnfollow(${index})'>${(user.follower.includes(currentUser.username) && currentUser.following.includes(currentUser.username)) ? 'Following' : 'follow'}</button>`}
+            <div class='user-posts'>
+                <h3>Posts:</h3>
+                ${user.posts.map(post => `
+                    <div class="post">
+                        <img src="${post.postImages}" alt="post image" style="width: 200px; height: 200px; object-fit: cover;">
+                        <p>${post.postCaption}</p>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+        }
+
+        function displayUser(currentUser) {
+            if (!currentUser) return;
+            const userContent = document.getElementById('userContent');
+            userContent.innerHTML = '';
+            userContent.innerHTML = displayUserProfile(currentUser, true);
+        }
+
+        const postForm = document.getElementById('postForm');
+        postForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            createPost();
+        });
+
+        const postImageInput = postForm.querySelector('.post-image');
+        const postPreview = document.getElementById('postPreview');
+
+        postImageInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+
+            Array.from(files).forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.classList.add('file-item');
+
+                let previewImageUrl = '';
+                const fileReader = new FileReader();
+                fileReader.onload = function (e) {
+                    const previewImageUrl = e.target.result;
+
+                    const img = document.createElement('img');
+                    img.src = previewImageUrl;
+                    fileItem.appendChild(img);
+                    const removeFile = document.createElement('button');
+                    removeFile.textContent = 'remove';
+                    removeFile.classList.add('remove-file')
+                    removeFile.addEventListener('click', () => {
+                        fileItem.remove();
+                        postImageInput.value = '';
+                    })
+                    fileItem.appendChild(removeFile);
+                    postPreview.appendChild(fileItem);
+                }
+                fileReader.readAsDataURL(file);
+            })
+        })
+
+        function createPost() {
+            if (!currentUser) return;
+
+            const postImagesInput = postForm.querySelector('.post-image');
+            const postCaption = postForm.querySelector('.post-caption').value.trim();
+
+            const postImagesFiles = postImagesInput.files;
+
+            if (postImagesFiles.length > 0 && postCaption) {
+                Array.from(postImagesFiles).forEach(postImageFile => {
+                    let postImageUrl = '';
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        postImageUrl = e.target.result;
+
+                        const post = {
+                            postImages: postImageUrl,
+                            postCaption: postCaption,
+                            likes: 0,
+                            likedBy: [],
+                            comments: [],
+                            countComments: 0,
+                        };
+
+                        const userIndex = users.findIndex(user => user.username === currentUser.username);
+
+                        if (userIndex !== -1) {
+                            users[userIndex].posts.push(post);
+                            localStorage.setItem('userData', JSON.stringify(users));
+
+                            currentUser = users[userIndex];
+
+                            postForm.querySelector('.post-caption').value = '';
+                            postImagesInput.value = '';
+                            postPreview.innerHTML = '';
+
+                            displayUser(currentUser);
+                            explorePost();
+                        }
+
+                    };
+                    reader.readAsDataURL(postImageFile);
+                });
+            } else {
+                alert('Please select images and add a caption');
+            }
+        }
+
+        function explorePost() {
+            if (!currentUser) return;
+            const exploreContent = document.getElementById('exploreContent');
+            exploreContent.innerHTML = '';
+
+            exploreContent.innerHTML = `
+        <div class="explore">
+            ${users.map((user, userIndex) =>
+                user.posts.map((post, postIndex) =>
+                    `
+                    <div class="post">
+                        <img src="${post.postImages}" alt="Post Image" style="width: 400px; height: 400px; object-fit: cover;" />
+                        <p>${post.postCaption}</p>
+                        <span class='countLikes'>Likes : ${post.likes}</span>
+                        <span>Comments: ${post.countComments}</span>
+                        <br>
+                        <button class="like-post" onclick='likePost(${userIndex}, ${postIndex})'>
+                            ${post.likedBy && post.likedBy.includes(currentUser.username) ? 'Unlike' : 'Like'}
+                        </button>
+                        <button onclick='postComment(${userIndex}, ${postIndex})'>Post Comment</button>
+                        <div class='display-comments'>
+                            <div class='post-comment'>
+                                ${post.comments.map(comment =>
+                        `
+                                   <h3>${comment.commentPoster}</h3>
+                                   <span>${comment.userComment}</span>
+                                   `
+                    ).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    `
+                ).join('')
+            ).join('')} 
+        </div>
+    `;
+
+        }
+
+        function postComment(userIndex, postIndex) {
+            const userComment = prompt('Enter Your comment:');
+
+            if (userComment) {
+                const createComment = {
+                    commentPoster: currentUser.name,
+                    userComment: userComment
+                }
+                users[userIndex].posts[postIndex].comments.push(createComment);
+            }
+
+            users[userIndex].posts[postIndex].countComments += 1;
+            localStorage.setItem('userData', JSON.stringify(users));
+            explorePost();
+
+        }
+
+        function likePost(userIndex, postIndex) {
+            const post = users[userIndex].posts[postIndex];
+            const userLiked = post.likedBy && post.likedBy.includes(currentUser.username);
+
+            if (userLiked) {
+                post.likes -= 1;
+                post.likedBy = post.likedBy.filter(user => user !== currentUser.username);
+            } else {
+                post.likes += 1;
+                if (!post.likedBy) {
+                    post.likedBy = [];
+                }
+                post.likedBy.push(currentUser.username);
+            }
+
+            localStorage.setItem('userData', JSON.stringify(users));
+            explorePost();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchInputValue = e.target.value.trim().toLowerCase();
+
+            const matchingUsers = users.filter(user => user.username.toLowerCase().includes(searchInputValue));
+
+            const displaySearchUsers = document.getElementById('displaySearchUsers');
+            displaySearchUsers.innerHTML = '';
+
+            if (matchingUsers.length > 0) {
+                matchingUsers.forEach((user, index) => {
+                    const originalIndex = users.findIndex(u => u.username === user.username);
+
+                    displaySearchUsers.innerHTML += `
+                <button class="display-search-user" onclick='viewOtherUserProfile(${originalIndex})'>
+                    <div class="display-search-avatar">
+                        <img src="${user.avatar}" alt="User Avatar" />
+                    </div>
+                    <div class="display-user-info">
+                        <h3>${user.name}</h3>
+                        <p>@${user.username}</p>
+                    </div>
+                </button>
+            `;
+                });
+            } else {
+                displaySearchUsers.innerHTML = '<p>No users found</p>';
+            }
+        });
+
+        function viewOtherUserProfile(index) {
+            const matchingUser = users[index];
+            const displayOtherUserProfile = document.getElementById('displayOtherUserProfile');
+
+            displayOtherUserProfile.innerHTML = '';
+            displayOtherUserProfile.innerHTML = displayUserProfile(matchingUser, false);
+        }
+
+        function followAndUnfollow(index) {
+            const targetUser = users[index];
+            const isAlreadyFollowing = currentUser.following.includes(targetUser.username);
+
+            // Find the index of the current user in the users array
+            const currentUserIndex = users.findIndex(u => u.username === currentUser.username);
+
+            if (isAlreadyFollowing) {
+                currentUser.following = currentUser.following.filter(username => username !== targetUser.username);
+                targetUser.follower = targetUser.follower.filter(username => username !== currentUser.username);
+                currentUser.countFollowing -= 1;
+                targetUser.countFollower -= 1;
+            } else {
+                currentUser.following.push(targetUser.username);
+                targetUser.follower.push(currentUser.username);
+                currentUser.countFollowing += 1;
+                targetUser.countFollower += 1;
+            }
+
+            // Update both the currentUser and the users array in localStorage
+            users[currentUserIndex] = currentUser;
+            localStorage.setItem('userData', JSON.stringify(users));
+
+            viewOtherUserProfile(index);
+            displayBrowsePosts(); // Refresh browse posts
+        }
+
+        function displayBrowsePosts() {
+            const browse = document.getElementById('browse');
+            browse.innerHTML = '';
+
+            // Check if currentUser exists and has a following array
+            if (!currentUser || !currentUser.following || currentUser.following.length === 0) {
+                browse.innerHTML = '<p>Follow some users to see their posts</p>';
+                return;
+            }
+
+            // Collect posts from followed users
+            const followedUsersPosts = users
+                .filter(user => currentUser.following.includes(user.username))
+                .flatMap(user =>
+                    user.posts.map(post => ({
+                        ...post,
+                        username: user.username,
+                        name: user.name
+                    }))
+                );
+
+            if (followedUsersPosts.length > 0) {
+                browse.innerHTML = followedUsersPosts.map(post => `
+            <div class="followed-post">
+                <div class="post-header">
+                    <strong>${post.name} (@${post.username})</strong>
+                </div>
+                <img src='${post.postImages}' width='400' height='400' />
+                <p>${post.postCaption}</p>
+            </div>
+        `).join('');
+            } else {
+                browse.innerHTML = '<p>No posts from followed users</p>';
+            }
+        }
+
+        displayBrowsePosts()
+    </script>
+</body>
+
+</html>
